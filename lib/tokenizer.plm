@@ -1,0 +1,57 @@
+/*
+* tokenizer(+RemainedText, +ProcessingToken, ?Tokens, +Index)
+*   predicato che è vero se Tokens è la riscrittura di RemainedText come lista di token t(Index, Word). I tokens sono aggiunti alla lista in maniera bottom-up
+*/
+
+:- module(tokenizer).
+:- export([tokenize]).
+
+
+
+tokenize(Text, Tokens):-
+	tokenizer(Text, nil, Tokens, 0).
+
+
+/* vero se sto leggo un carattere separatore, da ignorare e nn sto analizzando nessun token */
+tokenizer([First | Rest], nil, Tokens, Cursor):-
+	separator(First),
+	ignore(First), !, 
+	NewCursor is Cursor + 1,
+	tokenizer(Rest, nil, Tokens, NewCursor).
+
+/* vero se sto leggo un carattere separatore, da NON ignorare e nn sto analizzando nessun token */
+tokenizer([First | Rest], nil, [t(Cursor, [First]) | Tokens], Cursor):-
+	separator(First), !, 
+	NewCursor is Cursor + 1,
+	tokenizer(Rest, nil, Tokens, NewCursor). /* siccome è già separatore egli stesso, lo aggiungo direttamente */
+	
+
+/* vero se sto leggo un carattere separatore, da ignorare e sto analizzando un token */	
+tokenizer([First | Rest], t(I, W) , [t(I, W) | Tokens], Cursor):-
+	separator(First),  	
+	ignore(First), !,
+	NewCursor is Cursor + 1,
+	tokenizer(Rest, nil, Tokens, NewCursor).
+	
+	
+/* vero se sto leggo un carattere separatore, da NON ignorare e sto analizzando un token */	
+tokenizer([First | Rest], t(I, W) , [t(I, W), t(Cursor, [First]) | Tokens], Cursor):-
+	separator(First), !, 
+	NewCursor is Cursor + 1,  /* siccome è già separatore egli stesso, lo aggiungo direttamente */
+	tokenize(Rest, nil, Tokens, NewCursor).
+	
+/* vero se sto leggendo un carattere NON separatore e NON sto già analizzando un token */
+tokenizer([First | Rest], nil, Tokens, Cursor):-
+	NewCursor is Cursor + 1,
+	tokenizer(Rest, t(Cursor, [First]), Tokens, NewCursor).	
+
+/* vero se sto leggendo un carattere NON separatore e sto già analizzando un token */
+tokenizer([First | Rest], t(I, W), Tokens, Cursor):-
+	NewCursor is Cursor + 1,
+	last(First, W, Word),
+	tokenizer(Rest, t(I, Word), Tokens, NewCursor).
+
+/* fine del testo, ho un token */
+tokenizer([], T, [T], _).	
+
+/* fine del testo, NON ho un token */
